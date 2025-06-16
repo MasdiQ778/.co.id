@@ -1,2 +1,0 @@
-# .co.id
-panel billing
