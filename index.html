@@ -2,46 +2,121 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Panel Multi Billing Rental PS</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login Admin PS</title>
+  <style>
+    :root {
+      --primary: #127F99;
+    }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, var(--primary), #0d4f5c);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    .login-card {
+      background: #fff;
+      padding: 2rem;
+      border-radius: 1.5rem;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 360px;
+      box-sizing: border-box;
+    }
+    .login-card h2 {
+      text-align: center;
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+    }
+    .form-group {
+      position: relative;
+      margin-bottom: 1.5rem;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 1rem 0.75rem 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 0.75rem;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+    .form-group label {
+      position: absolute;
+      top: 1rem;
+      left: 0.75rem;
+      font-size: 0.9rem;
+      color: #666;
+      pointer-events: none;
+      transition: 0.2s ease all;
+      background: white;
+      padding: 0 0.25rem;
+    }
+    .form-group input:focus {
+      border-color: var(--primary);
+    }
+    .form-group input:focus + label,
+    .form-group input:not(:placeholder-shown) + label {
+      top: -0.6rem;
+      left: 0.6rem;
+      font-size: 0.75rem;
+      color: var(--primary);
+    }
+    button {
+      width: 100%;
+      padding: 0.9rem;
+      background: var(--primary);
+      color: white;
+      font-size: 1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    button:hover {
+      background: #0d657b;
+    }
+    .error {
+      color: red;
+      text-align: center;
+      margin-bottom: 1rem;
+      display: none;
+      font-size: 0.9rem;
+    }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h2>Rental PS - Multi Billing</h2>
-    </header>
-
-    <section class="control">
-      <input type="text" id="psName" placeholder="Nama PS (contoh: PS1)" />
-      <input type="number" id="rate" placeholder="Harga per Jam (Rp)" />
-      <button onclick="addBilling()">+ Tambah Billing</button>
-    </section>
-
-    <div id="billingList" class="billing-list"></div>
-
-    <div class="report-section">
-      <h3>Riwayat Billing</h3>
-      <div class="actions">
-        <button onclick="exportExcel()">Export Excel</button>
-        <button onclick="clearToday()">Hapus Hari Ini</button>
-      </div>
-      <table id="billingTable">
-        <thead>
-          <tr>
-            <th>Nama</th>
-            <th>Mulai</th>
-            <th>Selesai</th>
-            <th>Durasi</th>
-            <th>Biaya</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-      </table>
+  <div class="login-card">
+    <h2>Login Admin PS</h2>
+    <div class="error" id="errorMsg">Username atau Password salah</div>
+    <div class="form-group">
+      <input type="text" id="username" required placeholder=" " />
+      <label for="username">Username</label>
     </div>
+    <div class="form-group">
+      <input type="password" id="password" required placeholder=" " />
+      <label for="password">Password</label>
+    </div>
+    <button onclick="login()">Masuk</button>
   </div>
 
-  <script src="script.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script>
+    function login() {
+      const user = document.getElementById("username").value;
+      const pass = document.getElementById("password").value;
+      const error = document.getElementById("errorMsg");
+
+      if (user === "admin" && pass === "12345") {
+        localStorage.setItem("isLoggedIn", "true");
+        window.location.href = "dashboard.html";
+      } else {
+        error.style.display = "block";
+      }
+    }
+  </script>
 </body>
 </html>
