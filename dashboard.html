@@ -1,257 +1,148 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-theme="light">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dashboard Billing PS</title>
+  <link rel="stylesheet" href="dashboard.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <style>
-    :root {
-      --bg: #f4f4f4;
-      --card: #ffffff;
-      --text: #333333;
-      --accent: #127F99;
-      --danger: #e74c3c;
-    }
-
-    [data-theme="dark"] {
-      --bg: #1e1e1e;
-      --card: #2c2c2c;
-      --text: #eeeeee;
-      --accent: #0aa3c2;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      padding: 1rem;
-      font-family: 'Segoe UI', sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
-      transition: all 0.3s ease;
-    }
-
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem;
-    }
-
-    .bubble {
-      background-color: var(--card);
-      border-left: 8px solid var(--accent);
-      padding: 1rem;
-      border-radius: 1rem;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      margin-bottom: 1rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .bubble h3 {
-      margin: 0 0 0.3rem 0;
-      font-size: 1.1rem;
-    }
-
-    .bubble span {
-      font-weight: bold;
-      color: var(--accent);
-    }
-
-    .controls {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-      margin-bottom: 1rem;
-    }
-
-    input[type="number"] {
-      padding: 0.6rem;
-      width: 100%;
-      max-width: 200px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 1rem;
-    }
-
-    button {
-      padding: 0.6rem 1.2rem;
-      border: none;
-      border-radius: 8px;
-      font-weight: bold;
-      cursor: pointer;
-      background-color: var(--accent);
-      color: white;
-      margin: 0.4rem 0;
-      transition: background-color 0.3s;
-    }
-
-    button:hover {
-      background-color: #0e6b7c;
-    }
-
-    .btn-danger {
-      background-color: var(--danger);
-    }
-
-    .btn-danger:hover {
-      background-color: #c0392b;
-    }
-
-    .btn-secondary {
-      background-color: #555;
-    }
-
-    .btn-secondary:hover {
-      background-color: #444;
-    }
-
-    .dark-toggle {
-      cursor: pointer;
-      font-size: 0.9rem;
-      text-decoration: underline;
-    }
-
-    .total-box {
-      font-size: 1.1rem;
-      margin-top: 1rem;
-      color: var(--accent);
-      font-weight: bold;
-    }
-
-    .logout {
-      font-size: 0.9rem;
-      color: var(--danger);
-      text-decoration: underline;
-      cursor: pointer;
-      margin-left: 1rem;
-    }
-
-    @media (max-width: 600px) {
-      .bubble {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
-      .controls {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
-      input[type="number"] {
-        width: 100%;
-      }
-    }
-  </style>
 </head>
 <body>
-  <header>
-    <h2>Billing Aktif</h2>
-    <div>
-      <span class="dark-toggle" onclick="toggleDark()">🌓 Tema</span>
-      <span class="logout" onclick="logout()">Logout</span>
-    </div>
-  </header>
+  <div class="container">
+    <header>
+      <div class="left">
+        <h2>Billing Aktif</h2>
+      </div>
+      <div class="right">
+        <a href="#" class="dark-toggle" onclick="toggleTheme()">🌗 Tema</a>
+        <a href="#" class="logout" onclick="logout()">Logout</a>
+      </div>
+    </header>
 
-  <div class="controls">
-    <input type="number" id="durasi" placeholder="Durasi (menit)">
-    <button onclick="mulaiBilling()">Mulai</button>
-    <button onclick="exportExcel()">Export Excel</button>
+    <div class="controls">
+      <input type="number" id="durationInput" placeholder="Durasi (menit)" />
+      <button onclick="startBilling()">Mulai</button>
+      <button onclick="exportExcel()">Export Excel</button>
+    </div>
+
+    <div id="activeBillingContainer"></div>
+
+    <h3>Riwayat Billing Hari Ini</h3>
+    <table id="historyTable">
+      <thead>
+        <tr>
+          <th>Durasi (menit)</th>
+          <th>Total Harga</th>
+          <th>Waktu Selesai</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
 
-  <div id="billingContainer"></div>
-
   <script>
-    if (localStorage.getItem("isLoggedIn") !== "true") {
-      window.location.href = "login.html";
-    }
+    const activeBillingContainer = document.getElementById("activeBillingContainer");
+    const historyTable = document.getElementById("historyTable").querySelector("tbody");
+    const pricePerHour = 5000;
 
-    const RATE_PER_JAM = 5000;
-    const billingContainer = document.getElementById("billingContainer");
-
-    function mulaiBilling() {
-      const menit = parseInt(document.getElementById("durasi").value);
-      if (!menit || menit <= 0) return alert("Masukkan durasi yang valid!");
-
-      const now = new Date();
-      const end = new Date(now.getTime() + menit * 60000);
-      const harga = (menit / 60) * RATE_PER_JAM;
-
-      const id = Date.now();
-      const data = { id, mulai: now, selesai: end, harga: harga.toFixed(0) };
-      buatBubble(data);
-    }
-
-    function buatBubble(data) {
-      const div = document.createElement("div");
-      div.className = "bubble";
-      div.id = "billing-" + data.id;
-
-      const timeSpan = document.createElement("span");
-      const hargaSpan = document.createElement("span");
-      const selesaiBtn = document.createElement("button");
-      selesaiBtn.textContent = "Selesai";
-      selesaiBtn.className = "btn-danger";
-      selesaiBtn.onclick = () => div.remove();
-
-      function updateTimer() {
-        const now = new Date();
-        const selisih = Math.max(0, new Date(data.selesai) - now);
-        const menit = Math.floor((selisih / 1000) / 60);
-        const detik = Math.floor((selisih / 1000) % 60);
-        timeSpan.textContent = `Sisa: ${menit}m ${detik}s`;
-        if (selisih <= 0) {
-          clearInterval(timer);
-          selesaiBtn.style.background = "#aaa";
-          selesaiBtn.textContent = "Selesai";
-        }
-      }
-
-      div.innerHTML = `
-        <div>
-          <h3>Billing ID: ${data.id}</h3>
-          <div class="total-box">Rp ${parseInt(data.harga).toLocaleString()}</div>
-        </div>
-      `;
-      timeSpan.style.marginTop = "0.5rem";
-      div.appendChild(timeSpan);
-      div.appendChild(selesaiBtn);
-      billingContainer.appendChild(div);
-
-      const timer = setInterval(updateTimer, 1000);
-      updateTimer();
-    }
-
-    function exportExcel() {
-      const bubbles = document.querySelectorAll(".bubble");
-      const rows = [["ID", "Harga (Rp)"]];
-
-      bubbles.forEach(bub => {
-        const id = bub.querySelector("h3")?.textContent.split(": ")[1];
-        const harga = bub.querySelector(".total-box")?.textContent.replace(/[^\d]/g, "");
-        rows.push([id, harga]);
-      });
-
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet(rows);
-      XLSX.utils.book_append_sheet(wb, ws, "Billing Aktif");
-      XLSX.writeFile(wb, "billing-aktif.xlsx");
-    }
-
-    function toggleDark() {
-      const theme = document.body.getAttribute("data-theme");
-      document.body.setAttribute("data-theme", theme === "dark" ? "light" : "dark");
+    function toggleTheme() {
+      const html = document.documentElement;
+      html.setAttribute("data-theme", html.getAttribute("data-theme") === "dark" ? "light" : "dark");
     }
 
     function logout() {
-      localStorage.removeItem("isLoggedIn");
-      localStorage.removeItem("adminUser");
-      window.location.href = "login.html";
+      localStorage.removeItem("adminLoggedIn");
+      window.location.href = "index.html";
     }
+
+    function startBilling() {
+      const minutes = parseInt(document.getElementById("durationInput").value);
+      if (isNaN(minutes) || minutes <= 0) {
+        alert("Masukkan durasi dalam menit!");
+        return;
+      }
+
+      const ms = minutes * 60 * 1000;
+      const harga = (minutes / 60) * pricePerHour;
+      const id = Date.now();
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.setAttribute("data-id", id);
+      bubble.innerHTML = `
+        <div>
+          <h3>Durasi: <span>${minutes} menit</span></h3>
+          <p>Sisa Waktu: <span id="timer-${id}"></span></p>
+          <p class="total-box">Rp ${harga.toLocaleString()}</p>
+        </div>
+        <button class="btn-danger" onclick="selesaiBilling(${id}, ${minutes}, ${harga})">Selesai</button>
+      `;
+      activeBillingContainer.appendChild(bubble);
+
+      const endTime = Date.now() + ms;
+      const interval = setInterval(() => {
+        const now = Date.now();
+        const remaining = endTime - now;
+        const min = Math.floor((remaining / 1000 / 60) % 60);
+        const sec = Math.floor((remaining / 1000) % 60);
+        const timerEl = document.getElementById(`timer-${id}`);
+        if (timerEl) {
+          timerEl.textContent = `${min}m ${sec}s`;
+        }
+        if (remaining <= 0) {
+          clearInterval(interval);
+          selesaiBilling(id, minutes, harga);
+        }
+      }, 1000);
+    }
+
+    function selesaiBilling(id, durasi, harga) {
+      const bubble = document.querySelector(`.bubble[data-id="${id}"]`);
+      if (bubble) bubble.remove();
+
+      const now = new Date().toLocaleTimeString();
+      const row = historyTable.insertRow();
+      row.insertCell(0).textContent = `${durasi} menit`;
+      row.insertCell(1).textContent = `Rp ${harga.toLocaleString()}`;
+      row.insertCell(2).textContent = now;
+
+      simpanRiwayat();
+    }
+
+    function simpanRiwayat() {
+      const data = [];
+      const rows = historyTable.querySelectorAll("tr");
+      rows.forEach((row) => {
+        const cells = row.querySelectorAll("td");
+        if (cells.length === 3) {
+          data.push({
+            durasi: cells[0].textContent,
+            harga: cells[1].textContent,
+            selesai: cells[2].textContent,
+          });
+        }
+      });
+      localStorage.setItem("riwayatBilling", JSON.stringify(data));
+    }
+
+    function loadRiwayat() {
+      const data = JSON.parse(localStorage.getItem("riwayatBilling")) || [];
+      data.forEach((item) => {
+        const row = historyTable.insertRow();
+        row.insertCell(0).textContent = item.durasi;
+        row.insertCell(1).textContent = item.harga;
+        row.insertCell(2).textContent = item.selesai;
+      });
+    }
+
+    function exportExcel() {
+      const table = document.getElementById("historyTable");
+      const wb = XLSX.utils.table_to_book(table, { sheet: "Riwayat Billing" });
+      XLSX.writeFile(wb, "riwayat_billing.xlsx");
+    }
+
+    // Auto-load
+    loadRiwayat();
   </script>
 </body>
 </html>
