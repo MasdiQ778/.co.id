@@ -1,38 +1,71 @@
-let startTime;
-const ratePerHour = 5000;
+let billings = [];
+const billingList = document.getElementById("billingList");
+const tableBody = document.getElementById("tableBody");
 
-function startBilling() {
-  startTime = new Date();
-  document.getElementById("startTime").textContent = startTime.toLocaleTimeString();
-  document.getElementById("billingBubble").classList.remove("hidden");
-  document.getElementById("startBtn").style.display = "none";
-  updateTimer();
+function addBilling() {
+  const name = document.getElementById("psName").value.trim();
+  const rate = parseInt(document.getElementById("rate").value);
+
+  if (!name || !rate) return alert("Lengkapi nama dan harga per jam!");
+
+  const billing = {
+    name,
+    rate,
+    start: null,
+    intervalId: null
+  };
+
+  billings.push(billing);
+  renderBillingCard(billing);
 }
 
-function updateTimer() {
-  const interval = setInterval(() => {
-    if (!startTime) return clearInterval(interval);
+function renderBillingCard(billing) {
+  const card = document.createElement("div");
+  card.className = "billing-card";
+  card.id = `card-${billing.name}`;
+
+  card.innerHTML = `
+    <h4>${billing.name} (Rp ${billing.rate}/jam)</h4>
+    <div><strong>Mulai:</strong> <span id="start-${billing.name}">-</span></div>
+    <div><strong>Durasi:</strong> <span id="dur-${billing.name}">-</span></div>
+    <div><strong>Biaya:</strong> <span id="cost-${billing.name}">-</span></div>
+    <button onclick="start('${billing.name}')">Mulai</button>
+    <button onclick="stop('${billing.name}')">Selesai</button>
+  `;
+  billingList.appendChild(card);
+}
+
+function start(name) {
+  const billing = billings.find(b => b.name === name);
+  if (!billing) return;
+  billing.start = new Date();
+  document.getElementById(`start-${name}`).textContent = billing.start.toLocaleTimeString();
+
+  billing.intervalId = setInterval(() => {
     const now = new Date();
-    const diff = (now - startTime) / 1000;
-    const hours = diff / 3600;
-    const dur = `${Math.floor(diff / 60)} menit`;
-    const cost = Math.ceil(hours * ratePerHour);
-    document.getElementById("duration").textContent = dur;
-    document.getElementById("cost").textContent = cost.toLocaleString("id-ID");
+    const diffMs = now - billing.start;
+    const dur = Math.floor(diffMs / 60000);
+    const cost = Math.ceil((diffMs / 3600000) * billing.rate);
+
+    document.getElementById(`dur-${name}`).textContent = `${dur} menit`;
+    document.getElementById(`cost-${name}`).textContent = `Rp ${cost.toLocaleString("id-ID")}`;
   }, 1000);
 }
 
-function stopBilling() {
-  const endTime = new Date();
-  const durationMs = endTime - startTime;
-  const hours = durationMs / 3600000;
-  const duration = `${Math.floor(durationMs / 60000)} menit`;
-  const cost = Math.ceil(hours * ratePerHour);
+function stop(name) {
+  const billing = billings.find(b => b.name === name);
+  if (!billing || !billing.start) return;
+
+  clearInterval(billing.intervalId);
+  const end = new Date();
+  const dur = Math.floor((end - billing.start) / 60000);
+  const cost = Math.ceil((end - billing.start) / 3600000 * billing.rate);
 
   const entry = {
-    start: startTime.toLocaleTimeString(),
-    end: endTime.toLocaleTimeString(),
-    duration,
+    name: billing.name,
+    start: billing.start.toLocaleTimeString(),
+    end: end.toLocaleTimeString(),
+    duration: `${dur} menit`,
     cost: `Rp ${cost.toLocaleString("id-ID")}`,
     date: new Date().toLocaleDateString()
   };
@@ -40,56 +73,39 @@ function stopBilling() {
   saveToLocal(entry);
   addToTable(entry);
 
-  document.getElementById("billingBubble").classList.add("hidden");
-  document.getElementById("startBtn").style.display = "inline-block";
-  startTime = null;
+  billing.start = null;
+  document.getElementById(`start-${name}`).textContent = "-";
+  document.getElementById(`dur-${name}`).textContent = "-";
+  document.getElementById(`cost-${name}`).textContent = "-";
 }
 
 function saveToLocal(entry) {
-  const data = JSON.parse(localStorage.getItem("billingData") || "[]");
+  const data = JSON.parse(localStorage.getItem("multiBillingData") || "[]");
   data.push(entry);
-  localStorage.setItem("billingData", JSON.stringify(data));
+  localStorage.setItem("multiBillingData", JSON.stringify(data));
 }
 
 function loadData() {
-  const data = JSON.parse(localStorage.getItem("billingData") || "[]");
+  const data = JSON.parse(localStorage.getItem("multiBillingData") || "[]");
   const today = new Date().toLocaleDateString();
   data.filter(d => d.date === today).forEach(addToTable);
 }
 
 function addToTable(entry) {
   const row = document.createElement("tr");
-  row.innerHTML = `<td>${entry.start}</td><td>${entry.end}</td><td>${entry.duration}</td><td>${entry.cost}</td>`;
-  document.getElementById("tableBody").appendChild(row);
+  row.innerHTML = `<td>${entry.name}</td><td>${entry.start}</td><td>${entry.end}</td><td>${entry.duration}</td><td>${entry.cost}</td>`;
+  tableBody.appendChild(row);
 }
 
 function exportExcel() {
   const table = document.getElementById("billingTable");
-  const wb = XLSX.utils.table_to_book(table, { sheet: "Billing Hari Ini" });
+  const wb = XLSX.utils.table_to_book(table, { sheet: "Laporan" });
   XLSX.writeFile(wb, "Laporan_Billing.xlsx");
 }
 
-async function exportPDF() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  doc.text("Laporan Billing", 10, 10);
-  const rows = [...document.querySelectorAll("#tableBody tr")].map(tr => {
-    return [...tr.querySelectorAll("td")].map(td => td.innerText);
-  });
-  doc.autoTable({
-    head: [["Mulai", "Selesai", "Durasi", "Biaya"]],
-    body: rows
-  });
-  doc.save("Laporan_Billing.pdf");
-}
-
 function clearToday() {
-  const data = JSON.parse(localStorage.getItem("billingData") || "[]");
-  const today = new Date().toLocaleDateString();
-  const filtered = data.filter(d => d.date !== today);
-  localStorage.setItem("billingData", JSON.stringify(filtered));
-  document.getElementById("tableBody").innerHTML = "";
-  loadData();
+  localStorage.setItem("multiBillingData", "[]");
+  tableBody.innerHTML = "";
 }
 
 window.onload = loadData;
