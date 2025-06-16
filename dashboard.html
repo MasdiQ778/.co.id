@@ -8,24 +8,28 @@
   <style>
     :root {
       --bg: #f4f4f4;
-      --card: white;
-      --text: #333;
+      --card: #ffffff;
+      --text: #333333;
       --accent: #127F99;
+      --danger: #e74c3c;
     }
+
     [data-theme="dark"] {
       --bg: #1e1e1e;
       --card: #2c2c2c;
-      --text: #eee;
+      --text: #eeeeee;
       --accent: #0aa3c2;
     }
 
+    * { box-sizing: border-box; }
+
     body {
       margin: 0;
+      padding: 1rem;
       font-family: 'Segoe UI', sans-serif;
       background-color: var(--bg);
       color: var(--text);
       transition: all 0.3s ease;
-      padding: 1rem;
     }
 
     header {
@@ -40,196 +44,214 @@
       border-left: 8px solid var(--accent);
       padding: 1rem;
       border-radius: 1rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      margin: 1rem 0;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      margin-bottom: 1rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
     }
 
-    input, button {
-      padding: 0.7rem;
-      border-radius: 0.6rem;
+    .bubble h3 {
+      margin: 0 0 0.3rem 0;
+      font-size: 1.1rem;
+    }
+
+    .bubble span {
+      font-weight: bold;
+      color: var(--accent);
+    }
+
+    .controls {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    input[type="number"] {
+      padding: 0.6rem;
+      width: 100%;
+      max-width: 200px;
+      border-radius: 8px;
       border: 1px solid #ccc;
       font-size: 1rem;
     }
 
     button {
-      background: var(--accent);
-      color: white;
+      padding: 0.6rem 1.2rem;
       border: none;
+      border-radius: 8px;
+      font-weight: bold;
       cursor: pointer;
+      background-color: var(--accent);
+      color: white;
+      margin: 0.4rem 0;
+      transition: background-color 0.3s;
     }
 
-    .timer {
-      font-size: 1.4rem;
+    button:hover {
+      background-color: #0e6b7c;
+    }
+
+    .btn-danger {
+      background-color: var(--danger);
+    }
+
+    .btn-danger:hover {
+      background-color: #c0392b;
+    }
+
+    .btn-secondary {
+      background-color: #555;
+    }
+
+    .btn-secondary:hover {
+      background-color: #444;
+    }
+
+    .dark-toggle {
+      cursor: pointer;
+      font-size: 0.9rem;
+      text-decoration: underline;
+    }
+
+    .total-box {
+      font-size: 1.1rem;
+      margin-top: 1rem;
+      color: var(--accent);
       font-weight: bold;
     }
 
-    .history {
-      margin-top: 2rem;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 1rem;
-    }
-
-    th, td {
-      border: 1px solid #ccc;
-      padding: 0.5rem;
-      text-align: center;
-    }
-
-    .top-controls {
-      display: flex;
-      justify-content: space-between;
-      gap: 1rem;
-      flex-wrap: wrap;
-    }
-
     .logout {
-      background: crimson;
+      font-size: 0.9rem;
+      color: var(--danger);
+      text-decoration: underline;
+      cursor: pointer;
+      margin-left: 1rem;
+    }
+
+    @media (max-width: 600px) {
+      .bubble {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .controls {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      input[type="number"] {
+        width: 100%;
+      }
     }
   </style>
 </head>
 <body>
+  <header>
+    <h2>Billing Aktif</h2>
+    <div>
+      <span class="dark-toggle" onclick="toggleDark()">🌓 Tema</span>
+      <span class="logout" onclick="logout()">Logout</span>
+    </div>
+  </header>
 
-<header>
-  <h2>Billing PS - Dashboard</h2>
-  <div class="top-controls">
-    <button onclick="toggleTheme()">🌓 Dark Mode</button>
-    <button onclick="logout()" class="logout">Logout</button>
+  <div class="controls">
+    <input type="number" id="durasi" placeholder="Durasi (menit)">
+    <button onclick="mulaiBilling()">Mulai</button>
+    <button onclick="exportExcel()">Export Excel</button>
   </div>
-</header>
 
-<div>
-  <input type="text" id="nama" placeholder="Nama Pengguna">
-  <input type="number" id="durasi" placeholder="Durasi (menit)">
-  <button onclick="mulaiBilling()">Mulai Billing</button>
-</div>
+  <div id="billingContainer"></div>
 
-<div id="billingAktif"></div>
-
-<div class="history">
-  <h3>Riwayat Billing</h3>
-  <button onclick="exportExcel()">📄 Export Excel</button>
-  <table id="riwayatTable">
-    <thead>
-      <tr>
-        <th>Nama</th>
-        <th>Durasi</th>
-        <th>Total (Rp)</th>
-        <th>Waktu</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-</div>
-
-<script>
-  const hargaPerJam = 5000;
-
-  function toggleTheme() {
-    const current = document.documentElement.getAttribute("data-theme");
-    document.documentElement.setAttribute("data-theme", current === "dark" ? "light" : "dark");
-  }
-
-  function logout() {
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("adminUser");
-    window.location.href = "login.html";
-  }
-
-  function mulaiBilling() {
-    const nama = document.getElementById('nama').value.trim();
-    const durasi = parseInt(document.getElementById('durasi').value);
-    if (!nama || isNaN(durasi) || durasi <= 0) {
-      alert("Masukkan nama dan durasi dengan benar.");
-      return;
+  <script>
+    if (localStorage.getItem("isLoggedIn") !== "true") {
+      window.location.href = "login.html";
     }
 
-    const bubble = document.createElement("div");
-    bubble.className = "bubble";
+    const RATE_PER_JAM = 5000;
+    const billingContainer = document.getElementById("billingContainer");
 
-    const totalHarga = Math.round((durasi / 60) * hargaPerJam);
-    const selesaiWaktu = Date.now() + durasi * 60000;
+    function mulaiBilling() {
+      const menit = parseInt(document.getElementById("durasi").value);
+      if (!menit || menit <= 0) return alert("Masukkan durasi yang valid!");
 
-    const timerEl = document.createElement("div");
-    timerEl.className = "timer";
+      const now = new Date();
+      const end = new Date(now.getTime() + menit * 60000);
+      const harga = (menit / 60) * RATE_PER_JAM;
 
-    const stopBtn = document.createElement("button");
-    stopBtn.textContent = "Selesai";
-    stopBtn.onclick = function () {
-      const waktuSelesai = new Date().toLocaleString();
-      simpanRiwayat(nama, durasi, totalHarga, waktuSelesai);
-      bubble.remove();
-    };
+      const id = Date.now();
+      const data = { id, mulai: now, selesai: end, harga: harga.toFixed(0) };
+      buatBubble(data);
+    }
 
-    bubble.innerHTML = `<strong>${nama}</strong> - ${durasi} menit<br>Total: Rp ${totalHarga.toLocaleString()}<br>`;
-    bubble.appendChild(timerEl);
-    bubble.appendChild(stopBtn);
-    document.getElementById("billingAktif").appendChild(bubble);
+    function buatBubble(data) {
+      const div = document.createElement("div");
+      div.className = "bubble";
+      div.id = "billing-" + data.id;
 
-    updateTimer();
+      const timeSpan = document.createElement("span");
+      const hargaSpan = document.createElement("span");
+      const selesaiBtn = document.createElement("button");
+      selesaiBtn.textContent = "Selesai";
+      selesaiBtn.className = "btn-danger";
+      selesaiBtn.onclick = () => div.remove();
 
-    function updateTimer() {
-      const now = Date.now();
-      const sisa = Math.max(0, selesaiWaktu - now);
-      const menit = Math.floor(sisa / 60000);
-      const detik = Math.floor((sisa % 60000) / 1000);
-      timerEl.textContent = `${menit}m ${detik}s`;
-
-      if (sisa > 0) {
-        requestAnimationFrame(updateTimer);
-      } else {
-        timerEl.textContent = "Waktu Habis";
+      function updateTimer() {
+        const now = new Date();
+        const selisih = Math.max(0, new Date(data.selesai) - now);
+        const menit = Math.floor((selisih / 1000) / 60);
+        const detik = Math.floor((selisih / 1000) % 60);
+        timeSpan.textContent = `Sisa: ${menit}m ${detik}s`;
+        if (selisih <= 0) {
+          clearInterval(timer);
+          selesaiBtn.style.background = "#aaa";
+          selesaiBtn.textContent = "Selesai";
+        }
       }
+
+      div.innerHTML = `
+        <div>
+          <h3>Billing ID: ${data.id}</h3>
+          <div class="total-box">Rp ${parseInt(data.harga).toLocaleString()}</div>
+        </div>
+      `;
+      timeSpan.style.marginTop = "0.5rem";
+      div.appendChild(timeSpan);
+      div.appendChild(selesaiBtn);
+      billingContainer.appendChild(div);
+
+      const timer = setInterval(updateTimer, 1000);
+      updateTimer();
     }
 
-    document.getElementById("nama").value = "";
-    document.getElementById("durasi").value = "";
-  }
+    function exportExcel() {
+      const bubbles = document.querySelectorAll(".bubble");
+      const rows = [["ID", "Harga (Rp)"]];
 
-  function simpanRiwayat(nama, durasi, total, waktu) {
-    const data = JSON.parse(localStorage.getItem("riwayatBilling") || "[]");
-    data.push({ nama, durasi, total, waktu });
-    localStorage.setItem("riwayatBilling", JSON.stringify(data));
-    tampilkanRiwayat();
-  }
+      bubbles.forEach(bub => {
+        const id = bub.querySelector("h3")?.textContent.split(": ")[1];
+        const harga = bub.querySelector(".total-box")?.textContent.replace(/[^\d]/g, "");
+        rows.push([id, harga]);
+      });
 
-  function tampilkanRiwayat() {
-    const tbody = document.querySelector("#riwayatTable tbody");
-    tbody.innerHTML = "";
-    const data = JSON.parse(localStorage.getItem("riwayatBilling") || "[]");
-    for (const d of data) {
-      const row = `<tr>
-        <td>${d.nama}</td>
-        <td>${d.durasi} menit</td>
-        <td>Rp ${d.total.toLocaleString()}</td>
-        <td>${d.waktu}</td>
-      </tr>`;
-      tbody.innerHTML += row;
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      XLSX.utils.book_append_sheet(wb, ws, "Billing Aktif");
+      XLSX.writeFile(wb, "billing-aktif.xlsx");
     }
-  }
 
-  function exportExcel() {
-    const data = JSON.parse(localStorage.getItem("riwayatBilling") || "[]");
-    if (data.length === 0) return alert("Tidak ada data untuk diexport.");
+    function toggleDark() {
+      const theme = document.body.getAttribute("data-theme");
+      document.body.setAttribute("data-theme", theme === "dark" ? "light" : "dark");
+    }
 
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Riwayat Billing");
-    XLSX.writeFile(wb, "riwayat_billing.xlsx");
-  }
-
-  // Cek login
-  if (localStorage.getItem("isLoggedIn") !== "true") {
-    window.location.href = "login.html";
-  }
-
-  tampilkanRiwayat();
-</script>
+    function logout() {
+      localStorage.removeItem("isLoggedIn");
+      localStorage.removeItem("adminUser");
+      window.location.href = "login.html";
+    }
+  </script>
 </body>
 </html>
