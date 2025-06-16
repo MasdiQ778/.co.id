@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard Billing PS</title>
+  <style>
+    :root { --primary: #127F99; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background: #f0f2f5;
+    }
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 1rem;
+      text-align: center;
+      font-size: 1.3rem;
+      font-weight: bold;
+    }
+    .container {
+      padding: 1rem;
+    }
+    .form-billing {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    .form-billing input {
+      padding: 0.7rem;
+      border-radius: 0.5rem;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+      flex: 1;
+    }
+    .form-billing button {
+      background: var(--primary);
+      border: none;
+      color: white;
+      font-weight: bold;
+      padding: 0.7rem 1.2rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+    }
+    .bubble {
+      background: white;
+      padding: 1rem;
+      border-left: 6px solid var(--primary);
+      border-radius: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      position: relative;
+    }
+    .bubble h3 { margin: 0; color: #333; }
+    .bubble span { display: block; margin-top: 0.3rem; color: #555; }
+    .bubble button {
+      position: absolute;
+      right: 1rem;
+      bottom: 1rem;
+      background: crimson;
+      color: white;
+      border: none;
+      padding: 0.4rem 0.8rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <header>Dashboard Billing PS</header>
+  <div class="container">
+    <div class="form-billing">
+      <input type="text" id="nama" placeholder="Nama Pelanggan">
+      <input type="number" id="durasi" placeholder="Durasi (menit)" min="1">
+      <button onclick="tambahBilling()">Tambah</button>
+    </div>
+
+    <div id="billingList"></div>
+  </div>
+
+  <script>
+    let billings = JSON.parse(localStorage.getItem("activeBillings") || "[]");
+
+    function tambahBilling() {
+      const nama = document.getElementById("nama").value.trim();
+      const durasiMenit = parseInt(document.getElementById("durasi").value);
+      if (!nama || isNaN(durasiMenit) || durasiMenit <= 0) {
+        return alert("Isi nama dan durasi (dalam menit) dengan benar.");
+      }
+      const durasiDetik = durasiMenit * 60;
+      billings.push({ nama, mulai: Date.now(), durasi: durasiDetik });
+      localStorage.setItem("activeBillings", JSON.stringify(billings));
+      document.getElementById("nama").value = "";
+      document.getElementById("durasi").value = "";
+      renderBilling();
+    }
+
+    function selesaiBilling(index) {
+      if (!confirm("Selesaikan billing ini?")) return;
+      billings.splice(index, 1);
+      localStorage.setItem("activeBillings", JSON.stringify(billings));
+      renderBilling();
+    }
+
+    function hitungBiaya(detik) {
+      return Math.round((detik / 3600) * 8000);
+    }
+
+    function countdown(sisa) {
+      const jam = Math.floor(sisa / 3600);
+      const menit = Math.floor((sisa % 3600) / 60);
+      const detik = sisa % 60;
+      return `${jam}j ${menit}m ${detik}s`;
+    }
+
+    function renderBilling() {
+      const list = document.getElementById("billingList");
+      list.innerHTML = "";
+      billings.forEach((item, i) => {
+        const sekarang = Date.now();
+        const durasi = Math.floor((sekarang - item.mulai) / 1000);
+        const sisa = Math.max(item.durasi - durasi, 0);
+        const biaya = hitungBiaya(durasi);
+
+        const div = document.createElement("div");
+        div.className = "bubble";
+        div.innerHTML = `
+          <h3>${item.nama}</h3>
+          <span>Sisa waktu: <b>${countdown(sisa)}</b></span>
+          <span>Harga saat ini: <b>Rp ${biaya.toLocaleString()}</b></span>
+          <button onclick="selesaiBilling(${i})">Selesai</button>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    setInterval(renderBilling, 1000);
+    renderBilling();
+  </script>
+</body>
+</html>
