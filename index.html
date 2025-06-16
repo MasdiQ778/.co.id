@@ -3,38 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Panel Billing Rental PS</title>
+  <title>Panel Multi Billing Rental PS</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
     <header>
-      <h2>Rental PS - Panel Billing</h2>
+      <h2>Rental PS - Multi Billing</h2>
     </header>
 
-    <div class="billing-section">
-      <div class="active-billing">
-        <h3>Billing Aktif</h3>
-        <div id="billingBubble" class="bubble hidden">
-          <p><strong>Mulai:</strong> <span id="startTime"></span></p>
-          <p><strong>Durasi:</strong> <span id="duration"></span></p>
-          <p><strong>Biaya:</strong> Rp <span id="cost"></span></p>
-          <button onclick="stopBilling()">Selesai</button>
-        </div>
-        <button id="startBtn" onclick="startBilling()">Mulai Billing</button>
-      </div>
-    </div>
+    <section class="control">
+      <input type="text" id="psName" placeholder="Nama PS (contoh: PS1)" />
+      <input type="number" id="rate" placeholder="Harga per Jam (Rp)" />
+      <button onclick="addBilling()">+ Tambah Billing</button>
+    </section>
+
+    <div id="billingList" class="billing-list"></div>
 
     <div class="report-section">
       <h3>Riwayat Billing</h3>
       <div class="actions">
         <button onclick="exportExcel()">Export Excel</button>
-        <button onclick="exportPDF()">Export PDF</button>
         <button onclick="clearToday()">Hapus Hari Ini</button>
       </div>
       <table id="billingTable">
         <thead>
           <tr>
+            <th>Nama</th>
             <th>Mulai</th>
             <th>Selesai</th>
             <th>Durasi</th>
@@ -48,6 +43,5 @@
 
   <script src="script.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </body>
 </html>
