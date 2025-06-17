@@ -1,49 +1,51 @@
 <!DOCTYPE html>
 <html lang="id" data-theme="light">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard Billing PS</title>
-  <link rel="stylesheet" href="dashboard.css" />
+  <link rel="stylesheet" href="dashboard.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
-  <div class="container">
+  <div class="wrapper">
     <header>
-      <div class="left">
-        <h2>Billing Aktif</h2>
-      </div>
-      <div class="right">
-        <a href="#" class="dark-toggle" onclick="toggleTheme()">🌗 Tema</a>
-        <a href="#" class="logout" onclick="logout()">Logout</a>
+      <h2>Dashboard Billing PS</h2>
+      <div class="top-right">
+        <button onclick="toggleTheme()">🌗 Tema</button>
+        <button onclick="logout()" class="logout">Logout</button>
       </div>
     </header>
 
-    <div class="controls">
+    <section class="billing-input">
       <input type="number" id="durationInput" placeholder="Durasi (menit)" />
       <button onclick="startBilling()">Mulai</button>
       <button onclick="exportExcel()">Export Excel</button>
-    </div>
+    </section>
 
-    <div id="activeBillingContainer"></div>
+    <section>
+      <h3>Billing Aktif</h3>
+      <div id="activeBillingContainer"></div>
+    </section>
 
-    <h3>Riwayat Billing Hari Ini</h3>
-    <table id="historyTable">
-      <thead>
-        <tr>
-          <th>Durasi (menit)</th>
-          <th>Total Harga</th>
-          <th>Waktu Selesai</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <section>
+      <h3>Riwayat Billing Hari Ini</h3>
+      <table id="historyTable">
+        <thead>
+          <tr>
+            <th>Durasi</th>
+            <th>Total Harga</th>
+            <th>Waktu Selesai</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
   </div>
 
   <script>
-    const activeBillingContainer = document.getElementById("activeBillingContainer");
-    const historyTable = document.getElementById("historyTable").querySelector("tbody");
     const pricePerHour = 5000;
+    const historyTable = document.getElementById("historyTable").querySelector("tbody");
 
     function toggleTheme() {
       const html = document.documentElement;
@@ -56,69 +58,63 @@
     }
 
     function startBilling() {
-      const minutes = parseInt(document.getElementById("durationInput").value);
-      if (isNaN(minutes) || minutes <= 0) {
-        alert("Masukkan durasi dalam menit!");
-        return;
-      }
+      const duration = parseInt(document.getElementById("durationInput").value);
+      if (!duration || duration <= 0) return alert("Masukkan durasi (menit) dengan benar.");
 
-      const ms = minutes * 60 * 1000;
-      const harga = (minutes / 60) * pricePerHour;
+      const ms = duration * 60 * 1000;
+      const harga = (duration / 60) * pricePerHour;
       const id = Date.now();
-
       const bubble = document.createElement("div");
-      bubble.className = "bubble";
+      bubble.className = "billing-card";
       bubble.setAttribute("data-id", id);
       bubble.innerHTML = `
         <div>
-          <h3>Durasi: <span>${minutes} menit</span></h3>
-          <p>Sisa Waktu: <span id="timer-${id}"></span></p>
-          <p class="total-box">Rp ${harga.toLocaleString()}</p>
+          <strong>${duration} menit</strong><br>
+          <span id="timer-${id}">Menghitung...</span><br>
+          <span class="price">Rp ${harga.toLocaleString()}</span>
         </div>
-        <button class="btn-danger" onclick="selesaiBilling(${id}, ${minutes}, ${harga})">Selesai</button>
+        <button onclick="selesaiBilling(${id}, ${duration}, ${harga})">Selesai</button>
       `;
-      activeBillingContainer.appendChild(bubble);
+      document.getElementById("activeBillingContainer").appendChild(bubble);
 
-      const endTime = Date.now() + ms;
+      const end = Date.now() + ms;
       const interval = setInterval(() => {
         const now = Date.now();
-        const remaining = endTime - now;
+        const remaining = end - now;
         const min = Math.floor((remaining / 1000 / 60) % 60);
         const sec = Math.floor((remaining / 1000) % 60);
         const timerEl = document.getElementById(`timer-${id}`);
-        if (timerEl) {
-          timerEl.textContent = `${min}m ${sec}s`;
-        }
         if (remaining <= 0) {
           clearInterval(interval);
-          selesaiBilling(id, minutes, harga);
+          selesaiBilling(id, duration, harga);
+        } else {
+          timerEl.textContent = `${min}m ${sec}s`;
         }
       }, 1000);
     }
 
     function selesaiBilling(id, durasi, harga) {
-      const bubble = document.querySelector(`.bubble[data-id="${id}"]`);
-      if (bubble) bubble.remove();
-
+      const el = document.querySelector(`.billing-card[data-id="${id}"]`);
+      if (el) el.remove();
       const now = new Date().toLocaleTimeString();
       const row = historyTable.insertRow();
-      row.insertCell(0).textContent = `${durasi} menit`;
-      row.insertCell(1).textContent = `Rp ${harga.toLocaleString()}`;
-      row.insertCell(2).textContent = now;
-
+      row.innerHTML = `
+        <td>${durasi} menit</td>
+        <td>Rp ${harga.toLocaleString()}</td>
+        <td>${now}</td>
+      `;
       simpanRiwayat();
     }
 
     function simpanRiwayat() {
       const data = [];
-      const rows = historyTable.querySelectorAll("tr");
-      rows.forEach((row) => {
+      historyTable.querySelectorAll("tr").forEach(row => {
         const cells = row.querySelectorAll("td");
         if (cells.length === 3) {
           data.push({
             durasi: cells[0].textContent,
             harga: cells[1].textContent,
-            selesai: cells[2].textContent,
+            waktu: cells[2].textContent
           });
         }
       });
@@ -126,12 +122,14 @@
     }
 
     function loadRiwayat() {
-      const data = JSON.parse(localStorage.getItem("riwayatBilling")) || [];
-      data.forEach((item) => {
+      const data = JSON.parse(localStorage.getItem("riwayatBilling") || "[]");
+      data.forEach(item => {
         const row = historyTable.insertRow();
-        row.insertCell(0).textContent = item.durasi;
-        row.insertCell(1).textContent = item.harga;
-        row.insertCell(2).textContent = item.selesai;
+        row.innerHTML = `
+          <td>${item.durasi}</td>
+          <td>${item.harga}</td>
+          <td>${item.waktu}</td>
+        `;
       });
     }
 
@@ -141,7 +139,6 @@
       XLSX.writeFile(wb, "riwayat_billing.xlsx");
     }
 
-    // Auto-load
     loadRiwayat();
   </script>
 </body>
